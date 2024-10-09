@@ -7,15 +7,21 @@ DEFAULT-I2C-ADDRESS ::= 0x48
 ALT-I2C-ADDRESS::= 0x49
 REGISTER-CONVERT ::= 0x00
 REGISTER-CONFIG ::= 0x01
+REGISTER-LOWTHRESH::= 0x02
+REGISTER-HITHRESH::= 0x03
+
+CONVERT-READY-LO ::= 0x0000
+CONVERT-READY-HI ::= 0x8000
+
 
 REGISTER-MASK_::= 0x03
-REGISTER-LOWTHRESH_::= 0x02
-REGISTER-HITHRESH_::= 0x03
+
 
 OS-MASK_::= 0x8000
 OS-SINGLE_::= 0x8000  // Write: Set to start a single-conversion.
 OS-BUSY_::= 0x0000    // Read: Bit=0 when conversion is in progress.
 OS-NOTBUSY_::= 0x8000 // Read: Bit=1 when no conversion is in progress.
+
 
 MUX-MASK_::= 0x7000
 MUX-OPTS ::={
@@ -169,18 +175,27 @@ class Config:
   print-config-bits -> none:
     bits := this.config-bits
     print "$(%b bits)"
+  
+
+
 
   
 
 class ADS:
   config/Config := Config.from-default
   registers/serial.Registers
+  convert-ready-mode/bool := false
 
 
   constructor device/serial.Device:
     this.registers = device.registers
     this.registers.write-u16-be REGISTER-CONFIG this.config.config-bits
   
+  set-convert-ready -> none:
+    this.registers.write-u16-be REGISTER-LOWTHRESH CONVERT-READY-LO
+    this.registers.write-u16-be REGISTER-HITHRESH CONVERT-READY-HI
+    this.convert-ready-mode = true
+
   is-busy -> bool:
     config-value := this.registers.read_u16_be REGISTER-CONFIG
     return config-value & OS_MASK_ == OS_BUSY_
