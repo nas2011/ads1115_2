@@ -13,8 +13,8 @@ REGISTER-HITHRESH::= 0x03
 CONVERT-READY-LO ::= 0x0000
 CONVERT-READY-HI ::= 0x8000
 
-OS-SINGLE::= 0x8000  // Write: Set to start a single-conversion.
-
+OS-STARTCONV::= 0x8000  // Write: Set to start a single-conversion.
+OS-CONTINUOUS ::= 0x0000
 
 
 REGISTER-MASK_::= 0x03
@@ -166,13 +166,13 @@ class Config:
         | CQUE-NONE_       // Disable comparator queue.
         | CLAT-NONLAT_     // Don't latch the comparator.
         | CPOL-ACTVLOW_    // Alert/Rdy active low.
-        | this.comp-mode       // Traditional comparator.
-        | this.rate       // 475 samples per second.
-        | this.mode      // Single-shot mode.
+        | this.comp-mode   // comparator mode
+        | this.rate       // sample rate
+        | this.mode      // Sample mode.
         // When changing this configuration, don't forget to update the toitdoc of $read.
         | this.pga       // Range +/_4.096V.
         | this.mux
-        | OS-SINGLE       // Begin a single conversion.
+        | OS-STARTCONV   // Start conversion - this initiates the inital converstion when writing to the register. Basically starts the measuring process.
     return bits
 
   print-config-bits -> none:
