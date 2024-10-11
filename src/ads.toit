@@ -13,12 +13,15 @@ REGISTER-HITHRESH::= 0x03
 CONVERT-READY-LO ::= 0x0000
 CONVERT-READY-HI ::= 0x8000
 
+OS-SINGLE::= 0x8000  // Write: Set to start a single-conversion.
+
+
 
 REGISTER-MASK_::= 0x03
 
 
 OS-MASK_::= 0x8000
-OS-SINGLE_::= 0x8000  // Write: Set to start a single-conversion.
+
 OS-BUSY_::= 0x0000    // Read: Bit=0 when conversion is in progress.
 OS-NOTBUSY_::= 0x8000 // Read: Bit=1 when no conversion is in progress.
 
@@ -169,7 +172,7 @@ class Config:
         // When changing this configuration, don't forget to update the toitdoc of $read.
         | this.pga       // Range +/_4.096V.
         | this.mux
-        | OS-SINGLE_       // Begin a single conversion.
+        | OS-SINGLE       // Begin a single conversion.
     return bits
 
   print-config-bits -> none:
