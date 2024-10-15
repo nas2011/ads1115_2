@@ -39,7 +39,7 @@ MUX-OPTS ::={
 }
 
 
-SINGLE-ENDED_::= [MUX-SINGLE-0, MUX-SINGLE-1, MUX-SINGLE-2, MUX-SINGLE-3]
+// SINGLE-ENDED_::= [MUX-SINGLE-0, MUX-SINGLE-1, MUX-SINGLE-2, MUX-SINGLE-3]
 
 CPOL-MASK_::= 0x0008
 CPOL-ACTVLOW_::= 0x0000  // ALERT/RDY pin is low when active (default).
@@ -124,15 +124,15 @@ CHANNELS-MUX-DIFF-2-3_::= [2, 3]
 
 
 class Config:
-  pga/int
-  mode/int
-  comp-mode/int
-  rate/int
-  convert-ms/int
-  fsr/float
-  lsb/float
-  mux/int
-  current-channel/int
+  pga/int := ?         
+  mode/int := ?
+  comp-mode/int := ?
+  rate/int := ?
+  convert-ms/int := ?
+  fsr/float?
+  lsb/float?
+  mux/int := ?
+  current-channel/int := ?
   
 
   constructor.from-default :
@@ -179,10 +179,7 @@ class Config:
     bits := this.config-bits
     print "$(%b bits)"
   
-
-
-
-  
+ 
 
 class ADS:
   config/Config := Config.from-default
@@ -190,10 +187,13 @@ class ADS:
   convert-ready-mode/bool := false
 
 
-  constructor device/serial.Device:
+  constructor device/serial.Device config/Config:
     this.registers = device.registers
     this.registers.write-u16-be REGISTER-CONFIG this.config.config-bits
-  
+ 
+  write-config->none:
+    this.registers.write-u16-be REGISTER-CONFIG this.config.config-bits
+
   set-convert-ready -> none:
     this.registers.write-u16-be REGISTER-LOWTHRESH CONVERT-READY-LO
     this.registers.write-u16-be REGISTER-HITHRESH CONVERT-READY-HI
@@ -203,15 +203,15 @@ class ADS:
     config-value := this.registers.read_u16_be REGISTER-CONFIG
     return config-value & OS_MASK_ == OS_BUSY_
 
-
   read-cur-raw  -> int:
-    while this.is-busy:
-      sleep --ms=this.config.convert-ms
-    return this.registers.read-i16-be REGISTER-CONVERT
+    if this.config.mode == MODE-OPTS["MODE-CONTIN"]:
+      return this.registers.read-i16-be REGISTER-CONVERT
+    else:
+      while this.is-busy:
+        sleep --ms=this.config.convert-ms
+      return this.registers.read-i16-be REGISTER-CONVERT
   
   read-cur-v -> float:
-    while this.is-busy:
-      sleep --ms=this.config.convert-ms
     return this.read-cur-raw * this.config.lsb
   
   read-rms-v samp-count/int=60 -> float:
@@ -219,4 +219,23 @@ class ADS:
     samp-count.repeat:
       run-sum += (math.pow this.read-cur-v 2)
     return math.sqrt (run-sum / samp-count)
-    
+  
+  update-chan channel/int -> none:
+    if this.config.current-channel == channel:
+      return
+    else:
+      this.config.current-channel = channel
+    return
+
+  read-chan-raw channel/int -> int:
+    this.update-chan channel
+    return this.read-cur-raw
+  
+  read-chan-v channel/int -> float:
+    this.update-chan channel
+    return this.read-cur-v
+
+  read-chan-rms channel/int -> float:
+    this.update-chan channel
+    return this.read-rms-v
+  
